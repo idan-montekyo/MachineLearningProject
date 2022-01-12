@@ -3,6 +3,7 @@ from bs4 import BeautifulSoup
 import time
 import re
 import urllib.request
+import pandas as pd
 from urllib.request import build_opener, HTTPCookieProcessor, Request
 
 from selenium import webdriver
@@ -113,12 +114,14 @@ def scrape_single_game(gameUrl, rejectedGamesList,
                        name, price, discount, final_rating, number_of_ratings,
                        number_of_5star, number_of_4star, number_of_3star, number_of_2star, number_of_1star,
                        brand, genre, sub_genre, publication_day, publication_month, publication_year,
-                       operating_system, sub_operating_system, format, platform, other, product_description):
+                       operating_system, sub_operating_system, format, platform, other,
+                       product_description, description_bullets_num, description_size):
 
     temp_name = temp_price = temp_discount = temp_final_rating = temp_number_of_ratings = 0
-    temp_5star = temp_4star = temp_3star = temp_2star = temp_1star = temp_description = 0
+    temp_5star = temp_4star = temp_3star = temp_2star = temp_1star = 0
     temp_brand = temp_genre = temp_sub_genre = temp_day = temp_month = temp_year = 0
     temp_operating_system = temp_sub_operating_system = temp_format = temp_platform = temp_other = 0
+    temp_description = temp_description_bullets_num = temp_description_size = 0
 
     try:  # Try getting soup object
         soup = get_source_code_from_selenium(gameUrl)
@@ -278,6 +281,11 @@ def scrape_single_game(gameUrl, rejectedGamesList,
                     temp_description = productDescription
                 except:
                     temp_description = 0
+                try:
+                    temp_description_bullets_num = len(aboutThisItemBullets)
+                    temp_description_size = len(productDescription.split())
+                except:
+                    temp_description_size = temp_description_bullets_num = 0
 
 
                 ### Data appending into lists
@@ -305,6 +313,8 @@ def scrape_single_game(gameUrl, rejectedGamesList,
                 platform.append(temp_platform)
                 other.append(temp_other)
                 product_description.append(temp_description)
+                description_bullets_num.append(temp_description_bullets_num)
+                description_size.append(temp_description_size)
 
             except:  # No title found. probably got blocked.
                 rejectedGamesList.append(gameUrl)
@@ -320,6 +330,135 @@ def scrape_single_game(gameUrl, rejectedGamesList,
         print('Failed to get <Response [200]>\n', gameUrl)
 
 
+### Gets a dataset of a specific run (of 200 games), a list for rejected games, and run number.
+### concatenates the new dataset to the saved Data-Frames, and same for rej-list, and updates the CSVs.
+### Updates once every 200 games. Adds a dataset of 200 games to the specific run's CSV. Also updates rej-games list.
+def save_df_progress_to_specific_csv_files_axis0_and_update_rej_games_list(dataset, rejectedGamesList, runNumber):
+    specificRunNameForDataSetCsv = 'incompleteDatasets\dataset_' + str(runNumber) + '.csv'
+    try:
+        savedDatasetCsv = pd.read_csv(specificRunNameForDataSetCsv)
+
+        concatenatedGameUrlListDf = pd.concat([savedDatasetCsv, dataset])
+        concatenatedGameUrlListDf.to_csv(specificRunNameForDataSetCsv, index=False)
+    except:  # for the first specific run, in case 'dataset.csv' does not exist.
+        dataset.to_csv(specificRunNameForDataSetCsv, index=False)
+    finally:
+        savedCompleteRejectedGamesListCsv = pd.read_csv('completeRejectedGamesList.csv')
+
+        new200RunsRejectedGamesListDf = pd.DataFrame({'completeRejectedGamesList': rejectedGamesList})
+        concatenatedCompleteRejectedGamesListDf = pd.concat([savedCompleteRejectedGamesListCsv,
+                                                             new200RunsRejectedGamesListDf])
+        concatenatedCompleteRejectedGamesListDf.to_csv('completeRejectedGamesList.csv', index=False)
+
+
+### Gets an identifier from 0 to 7, representing what list of game-links to return.
+def get_all_games_by_col(returnColNum_0_to_7):
+    if returnColNum_0_to_7 == 0:
+        return pd.read_csv('LinksForEachRun/gameUrlList_0.csv').copy()
+    elif returnColNum_0_to_7 == 1:
+        return pd.read_csv('LinksForEachRun/gameUrlList_1.csv').copy()
+    elif returnColNum_0_to_7 == 2:
+        return pd.read_csv('LinksForEachRun/gameUrlList_2.csv').copy()
+    elif returnColNum_0_to_7 == 3:
+        return pd.read_csv('LinksForEachRun/gameUrlList_3.csv').copy()
+    elif returnColNum_0_to_7 == 4:
+        return pd.read_csv('LinksForEachRun/gameUrlList_4.csv').copy()
+    elif returnColNum_0_to_7 == 5:
+        return pd.read_csv('LinksForEachRun/gameUrlList_5.csv').copy()
+    elif returnColNum_0_to_7 == 6:
+        return pd.read_csv('LinksForEachRun/gameUrlList_6.csv').copy()
+    elif returnColNum_0_to_7 == 7:
+        return pd.read_csv('LinksForEachRun/gameUrlList_7.csv').copy()
+    else:
+        return None
+
+
+### Gets a number 0-7 representing what list of game-links we want, number 1-4 to decide what quarter of it to work on.
+### Initialize empty lists for all the features (Data-frame columns), and an empty rejected-games list.
+### Scrape chosen 200 game-links.
+### Save the 200 games as a Data-Frame and update relevant dataset csv, as well as whole rejected-games-list csv.
+def scrape_loop_200_games_from_col_x_quarter_y(gamesDfColumn_0_to_7, run_1_to_4):
+    ### Lists (columns of the Data-Frame)
+    name = []
+    price = []
+    discount = []
+    final_rating = []
+    number_of_ratings = []
+    number_of_5star = []
+    number_of_4star = []
+    number_of_3star = []
+    number_of_2star = []
+    number_of_1star = []
+    brand = []
+    genre = []
+    sub_genre = []
+    publication_day = []
+    publication_month = []
+    publication_year = []
+    operating_system = []
+    sub_operating_system = []
+    format = []
+    platform = []
+    other = []
+    product_description = []
+    description_bullets_num = []
+    description_size = []
+
+    if run_1_to_4 == 1:
+        gameUrls = get_all_games_by_col(gamesDfColumn_0_to_7).iloc[:200]
+    elif run_1_to_4 == 2:
+        gameUrls = get_all_games_by_col(gamesDfColumn_0_to_7).iloc[200:400]
+    elif run_1_to_4 == 3:
+        gameUrls = get_all_games_by_col(gamesDfColumn_0_to_7).iloc[400:600]
+    elif run_1_to_4 == 4:
+        gameUrls = get_all_games_by_col(gamesDfColumn_0_to_7).iloc[600:]
+
+    rejectedGamesList = []
+    ### Runs scraping function on 200 pages each time
+    for index, gameUrl in enumerate(gameUrls.iterrows()):
+        print('\n------------------------------------', index, '------------------------------------\n')
+        ### gameUrl[1][0] to get the link from tuple.
+        scrape_single_game(gameUrl[1][0], rejectedGamesList,
+                           name, price, discount, final_rating, number_of_ratings,
+                           number_of_5star, number_of_4star, number_of_3star, number_of_2star, number_of_1star,
+                           brand, genre, sub_genre, publication_day, publication_month, publication_year,
+                           operating_system, sub_operating_system, format, platform, other, product_description,
+                           description_bullets_num, description_size)
+
+    ### Final_rating will be the y-value (tagging). probably above/below 3.5.
+    ### Amount of stars will probably not be part of the learning.
+    ### Need to understand how to deal with 'Description'.
+    ### 'Other_features' column might be redundant.
+    df = pd.DataFrame({'Name': name,
+                       'Price': price,
+                       'Discount': discount,
+                       'Final_rating': final_rating,
+                       'Number_of_ratings': number_of_ratings,
+                       '5star': number_of_5star,
+                       '4star': number_of_4star,
+                       '3star': number_of_3star,
+                       '2star': number_of_2star,
+                       '1star': number_of_1star,
+                       'Brand': brand,
+                       'Genre': genre,
+                       'Sub-Genre': sub_genre,
+                       'Publication_day': publication_day,
+                       'Publication_month': publication_month,
+                       'Publication_year': publication_year,
+                       'Operating_system': operating_system,
+                       'Sub_operating_system': sub_operating_system,
+                       'Format': format,
+                       'Platform': platform,
+                       'Other_features': other,
+                       'Description': product_description,
+                       'Description_bullets_num': description_bullets_num,
+                       'Description_size': description_size})
+
+    save_df_progress_to_specific_csv_files_axis0_and_update_rej_games_list(df, rejectedGamesList, gamesDfColumn_0_to_7)
+
+    print('\n', df, '\n\nGames succeeded: ', len(df), '\n\nRejected games list:')
+    for rej in rejectedGamesList:
+        print(rej)
 
 
 # # Check if soup if valid
@@ -329,4 +468,3 @@ def scrape_single_game(gameUrl, rejectedGamesList,
 #       '\n-------------------------------------------------------------------------------'
 #       '\n-------------------------------------------------------------------------------\n')
 # print(soup.get_text())
-

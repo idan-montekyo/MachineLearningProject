@@ -114,7 +114,7 @@ def save_lists_progress_to_specific_csv_files_axis0(gameUrlList, runNumber):
         newGameUrlListDf = pd.DataFrame({'gameUrlList': gameUrlList})
         concatenatedGameUrlListDf = pd.concat([savedGameUrlListCsv, newGameUrlListDf])
         concatenatedGameUrlListDf.to_csv(specificRunNameForGameUrlListCsv, index=False)
-    except:  # for the first run, in case 'gameUrlList.csv' or 'rejectedPagesList.csv' does not exist.
+    except:  # for the first run, in case 'gameUrlList.csv' does not exist.
         firstGameUrlListDf = pd.DataFrame({'gameUrlList': gameUrlList})
         firstGameUrlListDf.to_csv(specificRunNameForGameUrlListCsv, index=False)
 
