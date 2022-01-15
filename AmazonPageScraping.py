@@ -9,8 +9,9 @@ from urllib.request import build_opener, HTTPCookieProcessor, Request
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 
+from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
 
-game_url = "https://www.amazon.com/Madden-22-Standard-Steam-Online/dp/B09CDHZ1DD/ref=sr_1_1?keywords=PC-compatible%2BGames&qid=1641063855&s=videogames&sr=1-1&th=1"
 
 headers = ({'User-Agent':
                 'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2228.0 Safari/537.36',
@@ -21,7 +22,8 @@ headers = ({'User-Agent':
 def get_source_code_from_selenium(url):
     options = Options()
     options.add_argument("--lang=en")
-    options.headless = True  # open browser unseen
+    # options.add_argument("--headless")  # open browser unseen
+    # options.headless = True  # open browser unseen
     chrome_driver_path = "C:\Program Files (x86)\chromedriver.exe"
     driver = webdriver.Chrome(chrome_driver_path, options=options)
     time.sleep(2)
@@ -91,6 +93,22 @@ def extract_number_from_string_get_location_0_from_list(string):
             return float(0)
 
 
+### Splits a string into characters
+def split(string):
+    return [char for char in string]
+
+
+### Turns a string representing a number with ',' to digits only.
+def string_number_with_comma_to_int_digits_only(string):
+    splitString = split(string)
+    digitsOnlyString = ''
+    for s in splitString:
+        if s.isdigit():
+            digitsOnlyString += s
+
+    return int(digitsOnlyString)
+
+
 def extract_day_and_year_for_publication_date(string):
     if not isinstance(string, str):
         return float(0)
@@ -144,62 +162,74 @@ def scrape_single_game(gameUrl, rejectedGamesList,
                 ### Gets prices (price, discount, etc...)
                 ### if len(pricesList) == 1 -> original price = lst[0]
                 ### if len(pricesList) == 4 -> final price = lst[1], discount percentage = lst[3]
-                priceTable = soup.find('div', attrs={'id': 'price'})
-                allTds = priceTable.findAll('td')
-                pricesList = []
-                for td in allTds:
-                    pString = td.get_text()
-                    pFloat = extract_number_from_string_get_location_0_from_list(pString)
-                    if isinstance(pFloat, float):
-                            if pFloat > 0:  # To remove all zeros
-                                pricesList.append(pFloat)
-                    else:
-                        for p in pFloat:
-                            if p > 0:  # To remove all zeros
-                                pricesList.append(p)
-                try:
-                    temp_price = pricesList[1]
-                    temp_discount = pricesList[2]
-                except (IndexError, ValueError):
-                    temp_price = pricesList[0]
-                    temp_discount = float(0)
-                except:
-                    temp_price = float(0)
-                    temp_discount = float(0)
+                try:  # If product's price is shown
+                    priceTable = soup.find('div', attrs={'id': 'price'})
+                    allTds = priceTable.findAll('td')
+                    pricesList = []
+                    for td in allTds:
+                        pString = td.get_text()
+                        pFloat = extract_number_from_string_get_location_0_from_list(pString)
+                        if isinstance(pFloat, float):
+                                if pFloat > 0:  # To remove all zeros
+                                    pricesList.append(pFloat)
+                        else:
+                            for p in pFloat:
+                                if p > 0:  # To remove all zeros
+                                    pricesList.append(p)
+                    try:
+                        temp_price = pricesList[1]
+                        temp_discount = pricesList[2]
+                    except (IndexError, ValueError):
+                        temp_price = pricesList[0]
+                        temp_discount = float(0)
+                    except:
+                        temp_price = float(0)
+                        temp_discount = float(0)
+                except:  # If product's price is hidden (need to register with credit-card and see price in cart).
+                    temp_price = temp_discount = -1
 
 
                 ### Gets final product rating and number of ratings
-                ratings = soup.find('div', attrs={'id': 'gameReviewsFeatureGroup'})
-                finalRatingAsString = ratings.find('span', attrs={'class': 'a-icon-alt'}).get_text()
-                numOfRatingsAsString = ratings.find('span', attrs={'class': 'a-size-base'}).get_text()
-                finalRating = extract_number_from_string_get_location_0_from_list(finalRatingAsString)[0]
-                numOfRatings = int(extract_number_from_string_get_location_0_from_list(numOfRatingsAsString)[0])
-                try:
-                    temp_final_rating = finalRating
-                except:
-                    temp_final_rating = 0
-                try:
-                    temp_number_of_ratings = numOfRatings
-                except:
-                    temp_number_of_ratings = 0
-
-
-                ### Gets rating percentage for each star (out of 100% total)
-                ### ONLY IF VAR-numOfRatings > 0 !
-                ratingPercentTable = soup.find('table', attrs={'class': 'a-normal a-align-center a-spacing-base'})
-                ratingPercentRows = ratingPercentTable.findAll('td', attrs={'class': 'a-text-right a-nowrap'})
-                ratingAmountListHoldingEachStar = []
-                for row in ratingPercentRows:
-                    pString = row.get_text()
-                    percentage = int(extract_number_from_string_get_location_0_from_list(pString)[0])
-                    amount = int(numOfRatings * percentage / 100)
-                    ratingAmountListHoldingEachStar.append(amount)
-                temp_numberOfStarsList = [temp_5star, temp_4star, temp_3star, temp_2star, temp_1star]
-                for i in range(5):
+                try:  # If product's rating exists.
+                    ratings = soup.find('div', attrs={'id': 'gameReviewsFeatureGroup'})
+                    finalRatingAsString = ratings.find('span', attrs={'class': 'a-icon-alt'}).get_text()
+                    numOfRatingsAsString = ratings.find('span', attrs={'class': 'a-size-base'}).get_text()
+                    finalRating = extract_number_from_string_get_location_0_from_list(finalRatingAsString)[0]
+                    try:  # if numOfRatingsAsString < 1000
+                        numOfRatings = int(extract_number_from_string_get_location_0_from_list(numOfRatingsAsString)[0])
+                    except:  # if numOfRatingsAsString > 1000
+                        numOfRatings = string_number_with_comma_to_int_digits_only(numOfRatingsAsString)
                     try:
-                        temp_numberOfStarsList[i] = ratingAmountListHoldingEachStar[i]
+                        temp_final_rating = finalRating
                     except:
-                        temp_numberOfStarsList[i] = 0
+                        temp_final_rating = 0
+                    try:
+                        temp_number_of_ratings = numOfRatings
+                    except:
+                        temp_number_of_ratings = 0
+
+
+                    ### Gets rating percentage for each star (out of 100% total)
+                    ### ONLY IF VAR-numOfRatings > 0 !
+                    ratingPercentTable = soup.find('table', attrs={'class': 'a-normal a-align-center a-spacing-base'})
+                    ratingPercentRows = ratingPercentTable.findAll('td', attrs={'class': 'a-text-right a-nowrap'})
+                    ratingAmountListHoldingEachStar = []
+                    for row in ratingPercentRows:
+                        pString = row.get_text()
+                        percentage = int(extract_number_from_string_get_location_0_from_list(pString)[0])
+                        amount = int(numOfRatings * percentage / 100)
+                        ratingAmountListHoldingEachStar.append(amount)
+                    temp_numberOfStarsList = [temp_5star, temp_4star, temp_3star, temp_2star, temp_1star]
+                    for i in range(5):
+                        try:
+                            temp_numberOfStarsList[i] = ratingAmountListHoldingEachStar[i]
+                        except:
+                            temp_numberOfStarsList[i] = 0
+                except:  # If product's rating doesn't exist.
+                    temp_final_rating = temp_number_of_ratings = -1
+                    temp_numberOfStarsList = [temp_5star, temp_4star, temp_3star, temp_2star, temp_1star]
+                    for i in range(5):
+                        temp_numberOfStarsList[i] = -1
 
 
                 ### Gets data-table with variables such as - Brand, Genre, Publication Date, Operating System, Computer Platform
@@ -271,21 +301,24 @@ def scrape_single_game(gameUrl, rejectedGamesList,
 
 
                 ### Gets 'About this item' - aka Description
-                aboutThisItem = soup.find('ul', attrs={'class': 'a-unordered-list a-vertical a-spacing-mini'})
-                aboutThisItemBullets = aboutThisItem.findAll('span')
-                productDescription = ''
-                for bullet in aboutThisItemBullets:
-                    productDescription = productDescription + bullet.get_text().strip() + '\n'
-                productDescription = productDescription[:-1]
-                try:
-                    temp_description = productDescription
-                except:
-                    temp_description = 0
-                try:
-                    temp_description_bullets_num = len(aboutThisItemBullets)
-                    temp_description_size = len(productDescription.split())
-                except:
-                    temp_description_size = temp_description_bullets_num = 0
+                try:  # If product has description
+                    aboutThisItem = soup.find('ul', attrs={'class': 'a-unordered-list a-vertical a-spacing-mini'})
+                    aboutThisItemBullets = aboutThisItem.findAll('span')
+                    productDescription = ''
+                    for bullet in aboutThisItemBullets:
+                        productDescription = productDescription + bullet.get_text().strip() + '\n'
+                    productDescription = productDescription[:-1]
+                    try:
+                        temp_description = productDescription
+                    except:
+                        temp_description = 0
+                    try:
+                        temp_description_bullets_num = len(aboutThisItemBullets)
+                        temp_description_size = len(productDescription.split())
+                    except:
+                        temp_description_size = temp_description_bullets_num = 0
+                except:  # If product has no description
+                    temp_description = temp_description_bullets_num = temp_description_size = 0
 
 
                 ### Data appending into lists
@@ -412,6 +445,8 @@ def scrape_loop_200_games_from_col_x_quarter_y(gamesDfColumn_0_to_7, run_1_to_4)
         gameUrls = get_all_games_by_col(gamesDfColumn_0_to_7).iloc[400:600]
     elif run_1_to_4 == 4:
         gameUrls = get_all_games_by_col(gamesDfColumn_0_to_7).iloc[600:]
+    # elif run_1_to_4 == 5:  ####################################################### DELETE
+    #     gameUrls = pd.read_csv('completeRejectedGamesList.csv').copy()[:-1]
 
     rejectedGamesList = []
     ### Runs scraping function on 200 pages each time
@@ -429,6 +464,7 @@ def scrape_loop_200_games_from_col_x_quarter_y(gamesDfColumn_0_to_7, run_1_to_4)
     ### Amount of stars will probably not be part of the learning.
     ### Need to understand how to deal with 'Description'.
     ### 'Other_features' column might be redundant.
+    ### Get rid of instances with Rating = (-1).
     df = pd.DataFrame({'Name': name,
                        'Price': price,
                        'Discount': discount,
@@ -454,9 +490,10 @@ def scrape_loop_200_games_from_col_x_quarter_y(gamesDfColumn_0_to_7, run_1_to_4)
                        'Description_bullets_num': description_bullets_num,
                        'Description_size': description_size})
 
-    save_df_progress_to_specific_csv_files_axis0_and_update_rej_games_list(df, rejectedGamesList, gamesDfColumn_0_to_7)
+    # save_df_progress_to_specific_csv_files_axis0_and_update_rej_games_list(df, rejectedGamesList, gamesDfColumn_0_to_7)
 
-    print('\n', df, '\n\nGames succeeded: ', len(df), '\n\nRejected games list:')
+    print('\n', df, '\n\nGames succeeded for run (', gamesDfColumn_0_to_7, ', ', run_1_to_4, '): ', len(df),
+          '\n\nRejected games list (', len(rejectedGamesList), ') :')
     for rej in rejectedGamesList:
         print(rej)
 
