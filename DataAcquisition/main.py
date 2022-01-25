@@ -32,20 +32,7 @@ def get_full_games_data_set(saveAsCsv=False):
     return gamesDataSet
 
 
-
 # scrape_loop_200_games_from_col_x_quarter_y(x_from_0_to_7, y_from_1_to_4)
 
 # gamesDataSet = get_full_games_data_set(False)
 gamesDataSet = pd.read_csv('gamesDataSet.csv')
-
-print('Above 4.2:', len(gamesDataSet[gamesDataSet['Final_rating'] >= 4.2]))
-print('Below 4.2:', len(gamesDataSet[gamesDataSet['Final_rating'] < 4.2]) - len(gamesDataSet[gamesDataSet['Final_rating'] == -1]))
-
-print('\nAbove 4.1:', len(gamesDataSet[gamesDataSet['Final_rating'] >= 4.1]))
-print('Below 4.1:', len(gamesDataSet[gamesDataSet['Final_rating'] < 4.1]) - len(gamesDataSet[gamesDataSet['Final_rating'] == -1]))
-
-print('\nAbove 4:', len(gamesDataSet[gamesDataSet['Final_rating'] >= 4]))
-print('Below 4:', len(gamesDataSet[gamesDataSet['Final_rating'] < 4]) - len(gamesDataSet[gamesDataSet['Final_rating'] == -1]))
-
-print('\nAbove 3.5:', len(gamesDataSet[gamesDataSet['Final_rating'] >= 3.5]))
-print('Below 3.5:', len(gamesDataSet[gamesDataSet['Final_rating'] < 3.5]) - len(gamesDataSet[gamesDataSet['Final_rating'] == -1]))

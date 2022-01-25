@@ -1,6 +1,16 @@
 import pandas as pd
 import numpy as np
 from re import search
+import matplotlib.pyplot as plt
+
+
+# Display options.
+def display_options(maxRows=False):
+    if maxRows:
+        pd.set_option('display.max_rows', None)  # Default 60
+    pd.set_option('display.max_columns', None)  # Default 0
+    pd.set_option('display.width', None)  # Default 80
+    pd.set_option('display.max_colwidth', None)  # Default 50
 
 
 # Remove all duplicated products, and resetting the indexes.
@@ -236,20 +246,6 @@ def handle_brand(df):  # Done
     df['Brand'] = df['Brand'].astype('int64')
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 # Create a new binary-column to classify whether the product is worth buying.
 # Based on the question if Final-rating value >= or < value of x.
 def create_new_worthy_column_seperated_by_rating_x(df, x):  # Done
@@ -278,15 +274,40 @@ def fix_missing_values_for_price_and_discount(df):  # Done
     df.loc[df['Discount'] == -1, 'Discount'] = nonMissingDataDfMeanDiscount
 
 
+# Remove products with outlier values
+def remove_outliers(df):  # Done
+    outlierRatings = df[df['Number_of_ratings'] > 50000].copy()
+    outlierDescriptionSize = df[df['Description_size'] > 500].copy()
+
+    indexesToRemove = set(outlierRatings.index.append(outlierDescriptionSize.index))
+    df.drop(indexesToRemove, axis=0, inplace=True)
+
+
+# Remove no-rating products.
+def remove_products_with_no_rating_and_save_them_to_csv(df, save=False):  # Done
+    noRatingDf = df[df['Final_rating'] == -1].copy()
+
+    if save:
+        noRatingDf.to_csv('ProductsWithNoRatingDf.csv')
+
+    # indexesToRemove = set(noRatingDf.index)
+    # df.drop(indexesToRemove, axis=0, inplace=True)
+    return df[df['Final_rating'] > -1]
+
+
+# TODO: complete remove-columns function.
 # Remove columns X from df.
-def remove_columns_for_learning(df):
-    colsToRemove = ['5star', '4star', '3star', '2star', '1star', 'Description']  # Final_rating / Worthy ?
+def remove_columns_for_learning(df):  # not done
+    colsToRemove = ['Final_rating', '4star', '3star', '2star', '1star', 'Description']  # '5star'
     df.drop(columns=colsToRemove, inplace=True)
 
 
-
-
-
-
-
+# Show boxplot to detect outliers.
+def boxplot(df, col=''):  # Done
+    if col in df.columns.to_list():
+        fig = plt.figure(figsize=(5, 3))
+        plt.boxplot(df[col])
+        plt.show()
+    else:
+        print('No such column in this DataFrame.')
 
