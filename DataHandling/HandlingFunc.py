@@ -1,11 +1,10 @@
 import pandas as pd
 import numpy as np
-from re import search
 import matplotlib.pyplot as plt
 
 
 # Display options.
-def display_options(maxRows=False):
+def display_options(maxRows=False):  # Done
     if maxRows:
         pd.set_option('display.max_rows', None)  # Default 60
     pd.set_option('display.max_columns', None)  # Default 0
@@ -248,7 +247,7 @@ def handle_brand(df):  # Done
 
 # Create a new binary-column to classify whether the product is worth buying.
 # Based on the question if Final-rating value >= or < value of x.
-def create_new_worthy_column_seperated_by_rating_x(df, x):  # Done
+def create_new_worthy_column_separated_by_rating_x(df, x):  # Done
     df.loc[df['Final_rating'] >= x, 'Worthy'] = 1
     df.loc[df['Final_rating'] < x, 'Worthy'] = 0
     df.loc[df['Final_rating'] == -1, 'Worthy'] = -1
@@ -274,6 +273,15 @@ def fix_missing_values_for_price_and_discount(df):  # Done
     df.loc[df['Discount'] == -1, 'Discount'] = nonMissingDataDfMeanDiscount
 
 
+# Remove all products with missing Price (-1).
+def remove_products_with_no_price_and_save_them_to_csv(df):  # Done
+    noPriceDf = df[df['Price'] == -1].copy()
+
+    # indexesToRemove = set(noPriceDf.index)
+    # df.drop(indexesToRemove, axis=0, inplace=True)
+    return df[df['Price'] > -1], noPriceDf
+
+
 # Remove products with outlier values
 def remove_outliers(df):  # Done
     outlierRatings = df[df['Number_of_ratings'] > 50000].copy()
@@ -284,30 +292,64 @@ def remove_outliers(df):  # Done
 
 
 # Remove no-rating products.
-def remove_products_with_no_rating_and_save_them_to_csv(df, save=False):  # Done
+def remove_products_with_no_rating_and_save_them_to_csv(df):  # Done
     noRatingDf = df[df['Final_rating'] == -1].copy()
-
-    if save:
-        noRatingDf.to_csv('ProductsWithNoRatingDf.csv')
 
     # indexesToRemove = set(noRatingDf.index)
     # df.drop(indexesToRemove, axis=0, inplace=True)
-    return df[df['Final_rating'] > -1]
-
-
-# TODO: complete remove-columns function.
-# Remove columns X from df.
-def remove_columns_for_learning(df):  # not done
-    colsToRemove = ['Final_rating', '4star', '3star', '2star', '1star', 'Description']  # '5star'
-    df.drop(columns=colsToRemove, inplace=True)
+    return df[df['Final_rating'] > -1], noRatingDf
 
 
 # Show boxplot to detect outliers.
-def boxplot(df, col=''):  # Done
+def boxplot(df, col='', phase=''):  # Done
     if col in df.columns.to_list():
         fig = plt.figure(figsize=(5, 3))
         plt.boxplot(df[col])
+        if len(phase) > 0:  # Before / After
+            plt.title(col + ' - ' + phase)
+        else:
+            plt.title(col)
         plt.show()
     else:
         print('No such column in this DataFrame.')
 
+
+# Full process of Data-Handling.
+# Full explanation at 'DataHandling.py' file.
+def handle_data(dataframe, prices_fix_or_remove: str, saveNoPriceDf=False, saveNoRatingDf=False,
+                months=True, otherFeatures=True, format=True, platform=True,
+                os=True, genre=True, brand=True, worthyColumn=True, outliers=True):
+    handle_duplicates(dataframe)
+    if months:
+        handle_months(dataframe)
+    if otherFeatures:
+        handle_other_features(dataframe)
+    if format:
+        handle_format(dataframe)
+    if platform:
+        handle_platform(dataframe)
+    if os:
+        handle_operating_system(dataframe)
+        handle_sub_operating_system(dataframe)
+    if genre:
+        handle_genre(dataframe)
+        handle_sub_genre(dataframe)
+    if brand:
+        handle_brand(dataframe)
+    if worthyColumn:
+        dataframe = create_new_worthy_column_separated_by_rating_x(dataframe, 4)
+    if prices_fix_or_remove == 'fix':
+        fix_missing_values_for_price_and_discount(dataframe)
+    elif prices_fix_or_remove == 'remove':
+        dataframe, noPriceDf = remove_products_with_no_price_and_save_them_to_csv(dataframe)
+    else:
+        pass
+    if outliers:
+        remove_outliers(dataframe)
+    dataframe, noRatingDf = remove_products_with_no_rating_and_save_them_to_csv(dataframe)
+    dataframe.set_index('Name', inplace=True)
+    if saveNoRatingDf:
+        noRatingDf.to_csv('ProductsWithNoRatingDf.csv')
+    if prices_fix_or_remove == 'remove' and saveNoPriceDf:
+        noPriceDf.to_csv('ProductsWithNoPriceDf.csv')
+    return dataframe
