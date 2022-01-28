@@ -232,7 +232,7 @@ def scrape_single_game(gameUrl, rejectedGamesList,
                         temp_numberOfStarsList[i] = -1
 
 
-                ### Gets data-table with variables such as - Brand, Genre, Publication Date, Operating System, Computer Platform
+                ### Gets data-table with variables such as - Brand, Genre, Publication Date, Operating System, Platform
                 dataTable = soup.find('table', attrs={'class': 'a-normal a-spacing-micro'})
                 dataRows = dataTable.findAll('tr', attrs={'class': 'a-spacing-small'})
                 ### description -> details (key -> value)

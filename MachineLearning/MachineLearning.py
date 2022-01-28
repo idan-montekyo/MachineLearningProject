@@ -1,30 +1,19 @@
+from MachineLearningFunc import *
 
+display_options(maxRows=False)
 
-### Final_rating will be the y-value (tagging). probably above/below 4.
-### Need to understand how to deal with 'Description'.
+# Reading the reduced dataset we already handled - the one that excludes products without price.
+originalReducedDataSet = pd.read_csv('../DataHandling/HandledReducedDataSet.csv')
+df = originalReducedDataSet.copy()
+remove_columns_for_learning(df)
 
+X, y = split_training_target_features(df, 'Worthy')
+X_train, X_test, y_train, y_test = split_train_test(X, y)
 
+# I've tried improving the model by scaling the data (StandardScaler, MinMaxScaler).
+# The results were worse, so I decided to move on without scaling.
+# Scaling code is deleted for serving no purpose.
 
-# TODO: complete remove-columns function.
-# Remove columns X from df.
-def remove_columns_for_learning(df):  # not done
-    colsToRemove = ['Final_rating', '4star', '3star', '2star', '1star', 'Description']  # '5star'
-    df.drop(columns=colsToRemove, inplace=True)
-
-
-
-# TODO: Take care at machine-learning phase.
-# ############################ Machine Learning ########################
-#
-# from sklearn.linear_model import LinearRegression
-#
-# # reg = LinearRegression()
-# # reg.fit()
-#
-# # remove_columns_for_learning(df)
-# #
-# # X = df.drop('Worthy', axis=1).copy()
-# # y = df['Worthy']
-# #
-# # print(X)
-# # print(y)
+# Run the best performance algorithm (Random Forest with max_depth=5) or run all algorithms by calling the second func.
+fit_predict_algos('Random Forest', X_train, X_test, y_train, y_test, max_depth=5)
+# run_all_fit_predict_algos(X_train, X_test, y_train, y_test)

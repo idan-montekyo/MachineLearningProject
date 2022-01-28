@@ -44,6 +44,6 @@ print(df)
 # 8. Remove all products with no ratings.
 #    These products will have no use since the model is supposed to predict certain rating range,
 #    and we want to verify it later on.
-# !! A nice edition to the project might be coming back to the no-rating-products after the project is finished,
+# !! A nice addition to the project might be coming back to the no-rating-products after the project is finished,
 #    and try to predict products with no rating given.
 # 9. Set 'Name' column as the Data-Frame's index, instead of numbers 0 to DF-length.
